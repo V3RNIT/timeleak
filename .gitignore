@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+
+# SQLite
+*.db
+*.sqlite3
+
+# Detector output
+detector/reports/*.html
+detector/reports/experiments/*.csv
+detector/reports/experiments/*.png
+detector/reports/experiments/*.html
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Claude Code local tooling state (shared settings.json is committed for cloud sessions)
+.claude/*
+!.claude/settings.json
+
+# Stray file from an unquoted `pip install gunicorn>=22.0`
+=22.0
