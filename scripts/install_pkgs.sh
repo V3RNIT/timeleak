@@ -13,5 +13,9 @@ if python -c "import flask, bcrypt, requests, numpy, scipy, matplotlib" 2>/dev/n
   exit 0
 fi
 
-pip install --quiet -r requirements.txt pytest
+# --ignore-installed blinker: the cloud image ships a Debian-owned blinker
+# that pip cannot uninstall, which made Flask's install fail silently.
+if ! pip install --quiet --ignore-installed blinker -r requirements.txt pytest; then
+  echo "install_pkgs.sh: pip install failed; run it manually to see why" >&2
+fi
 exit 0
