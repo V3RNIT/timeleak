@@ -25,19 +25,21 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from harness import sample_interleaved, split_by_type
+from harness import check_results, preflight, sample_interleaved, split_by_type
 from analysis import analyze
+import theme
 
-# --- shared TimeLeak palette (matches report.py's violet/magenta theme) ---
-BG = "#0a0714"
-SURFACE = "#170f2b"
-GRID = "#2a2140"
-TEXT = "#f4f0ff"
-TEXT_MUTED = "#9a8fc4"
-ACCENT = "#8b5cf6"
-GOOD = "#10b981"
-CRITICAL = "#f43f5e"
-WARNING = "#fbbf24"
+# --- Evidence File palette (theme.py): charts are printed "exhibits" on
+# paper, so they read the same inside the paper and blueprint page themes --
+BG = "#ffffff"
+SURFACE = theme.SHEET
+GRID = theme.GRID
+TEXT = theme.INK
+TEXT_MUTED = theme.FADED
+ACCENT = theme.VALID
+GOOD = theme.CLEAR
+CRITICAL = theme.STAMP
+WARNING = "#a16207"
 
 EXPERIMENTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "reports", "experiments")
 
@@ -74,7 +76,9 @@ def _write_csv(filename, fieldnames, rows):
 
 
 def _scan(url, valid_payload, invalid_payload, n_samples, warmup):
+    preflight(url, valid_payload)
     results = sample_interleaved(url, valid_payload, invalid_payload, n_samples=n_samples, warmup=warmup)
+    check_results(results)
     valid, invalid = split_by_type(results)
     return analyze(valid, invalid)
 

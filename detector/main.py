@@ -14,7 +14,7 @@ import argparse
 import sys
 from urllib.parse import urlparse
 
-from harness import sample_interleaved, split_by_type
+from harness import ScanError, check_results, preflight, sample_interleaved, split_by_type
 from analysis import analyze
 from report import generate_report
 import experiments
@@ -43,10 +43,12 @@ def cmd_scan(args):
     print(f"  valid={valid_payload}  invalid={invalid_payload}")
     print(f"  samples={args.samples}  warmup={args.warmup}")
 
+    preflight(url, valid_payload)
     results = sample_interleaved(
         url, valid_payload, invalid_payload,
         n_samples=args.samples, warmup=args.warmup,
     )
+    check_results(results)
     valid, invalid = split_by_type(results)
     report = analyze(valid, invalid)
     _print_verdict(report)
@@ -126,7 +128,9 @@ def _build_arg_parser():
     scan = sub.add_parser("scan", help="Scan a single endpoint for a valid/invalid username leak")
     scan.add_argument("--url", required=True, help="Full target URL, e.g. http://localhost:5000/login/v1")
     scan.add_argument("--valid-user", required=True, help="A username known to exist")
-    scan.add_argument("--invalid-user", required=True, help="A username known not to exist")
+    scan.add_argument("--invalid-user", required=True,
+                      help='A username known not to exist. Put {n} in it (e.g. "probe+{n}@example.com") to send '
+                           'a never-seen value on every request -- needed for /signup, which registers new emails')
     scan.add_argument("--field", default="username", help="JSON field name for the username (default: username)")
     scan.add_argument("--password", default="wrongpass", help="Password value sent with every request (default: wrongpass)")
     scan.add_argument("--samples", type=int, default=100, help="Samples per group (default: 100)")
@@ -157,6 +161,10 @@ def main():
     except KeyboardInterrupt:
         print("\nInterrupted.")
         sys.exit(1)
+    except ScanError as exc:
+        print(f"\nScan aborted: {exc}")
+        print("Is the demo app running? Start it with: python demo-app/app.py")
+        sys.exit(2)
 
 
 if __name__ == "__main__":

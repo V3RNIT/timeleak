@@ -62,13 +62,30 @@ def build_payload(field, value, extra_fields=None):
     return payload
 
 
+FRESH_TOKEN = "{n}"
+
+
+def expand_payload(payload, token):
+    """Replace every "{n}" in string values with `token`.
+
+    Endpoints that change state on first contact -- a signup form registers
+    the "non-existing" email on the very first request -- need a value that
+    has never been seen before on every request, e.g.
+    "probe+{n}@example.com". Payloads without "{n}" are returned unchanged.
+    """
+    if not any(isinstance(v, str) and FRESH_TOKEN in v for v in payload.values()):
+        return payload
+    return {k: v.replace(FRESH_TOKEN, token) if isinstance(v, str) else v for k, v in payload.items()}
+
+
 def warmup_requests(session, url, valid_payload, invalid_payload, count):
     """Fire a handful of throwaway requests to avoid cold-start skew
     (first-connection TCP/TLS handshake cost, interpreter/JIT warmup,
     OS-level caching) polluting the real samples."""
+    run_id = f"w{int(time.time() * 1000)}"
     for i in range(count):
         payload = valid_payload if i % 2 == 0 else invalid_payload
-        timed_request(session, url, payload)
+        timed_request(session, url, expand_payload(payload, f"{run_id}-{i}"))
 
 
 def sample_interleaved(url, valid_payload, invalid_payload, n_samples,
@@ -85,13 +102,15 @@ def sample_interleaved(url, valid_payload, invalid_payload, n_samples,
     """
     session = requests.Session()
     results = []
+    run_id = f"{int(time.time() * 1000)}"
 
     if warmup > 0:
         warmup_requests(session, url, valid_payload, invalid_payload, warmup)
 
     for i in range(n_samples):
         for payload_type, payload in (("valid", valid_payload), ("invalid", invalid_payload)):
-            record = timed_request(session, url, payload, timeout=timeout)
+            sent = expand_payload(payload, f"{run_id}-{len(results)}")
+            record = timed_request(session, url, sent, timeout=timeout)
             record["payload_type"] = payload_type
             results.append(record)
             if progress_callback:
@@ -101,6 +120,37 @@ def sample_interleaved(url, valid_payload, invalid_payload, n_samples,
 
     session.close()
     return results
+
+
+class ScanError(RuntimeError):
+    """The target could not be measured reliably; no verdict should be drawn."""
+
+
+# Above this share of failed requests (timeouts, refused connections) the
+# samples no longer describe the endpoint's behaviour, only the network's --
+# analysing them would report an unreachable server as "no leak".
+MAX_FAILED_RATIO = 0.1
+
+
+def preflight(url, payload, timeout=DEFAULT_TIMEOUT_S):
+    """Send one request before sampling so a dead or mistyped target fails
+    fast with a clear message instead of after N wasted requests."""
+    with requests.Session() as session:
+        record = timed_request(session, url, expand_payload(payload, f"pre{int(time.time() * 1000)}"), timeout=timeout)
+    if record["status_code"] is None:
+        raise ScanError(f"Could not reach {url}: {record.get('error', 'no response')}")
+    return record
+
+
+def check_results(results, max_failed_ratio=MAX_FAILED_RATIO):
+    """Raise ScanError if too many requests failed at the network level."""
+    failed = sum(1 for r in results if r["status_code"] is None)
+    if results and failed / len(results) > max_failed_ratio:
+        raise ScanError(
+            f"{failed} of {len(results)} requests failed (no HTTP response); "
+            "the target is unreachable or unstable, so no verdict was drawn."
+        )
+    return failed
 
 
 def split_by_type(results):
