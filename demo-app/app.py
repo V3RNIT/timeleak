@@ -57,13 +57,25 @@ _LANDING_PAGE_HTML = """<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TimeLeak demo-app</title>
 <style>
+  @font-face { font-family: 'TL Display'; font-weight: 700; src: url('/static/fonts/BarlowCondensed-Bold.woff2') format('woff2'); font-display: swap; }
+  @font-face { font-family: 'TL Display'; font-weight: 800; src: url('/static/fonts/BarlowCondensed-ExtraBold.woff2') format('woff2'); font-display: swap; }
+  @font-face { font-family: 'TL Type'; font-weight: 400; src: url('/static/fonts/CourierPrime-Regular.woff2') format('woff2'); font-display: swap; }
+  @font-face { font-family: 'TL Type'; font-weight: 700; src: url('/static/fonts/CourierPrime-Bold.woff2') format('woff2'); font-display: swap; }
   :root {
-    --page-plane: #0a0714; --surface: #170f2ba8; --border: rgba(196,185,224,0.14);
-    --text-primary: #f4f0ff; --text-secondary: #c4b9e0; --text-muted: #9a8fc4;
-    --accent: #8b5cf6; --critical: #f43f5e; --good: #10b981; --warning: #fbbf24;
+    --page-plane: #e9eef3; --surface: #f7f9fb; --border: #17202b; --grid: #cbd6e2;
+    --text-primary: #17202b; --text-secondary: #334155; --text-muted: #5b6878;
+    --accent: #1d4ed8; --critical: #c4122f; --good: #13795b; --warning: #a16207;
+    --display: 'TL Display', 'Arial Narrow', Impact, sans-serif; --type: 'TL Type', 'Courier New', monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page-plane: #0e1a2b; --surface: #13233a; --border: #e6edf6; --grid: #1c3150;
+      --text-primary: #e6edf6; --text-secondary: #c3cfdd; --text-muted: #8a9db5;
+      --accent: #7fa6ff; --critical: #ff5f6f; --good: #4fd6a0; --warning: #f5c451; color-scheme: dark;
+    }
   }
   * { box-sizing: border-box; }
-  html { color-scheme: dark; }
   body {
     margin: 0; min-height: 100vh; font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     color: var(--text-primary); background-color: var(--page-plane);
@@ -120,6 +132,22 @@ _LANDING_PAGE_HTML = """<!doctype html>
 
   .footer { font-size: 12.5px; color: var(--text-muted); line-height: 1.8; border-top: 1px solid var(--border); padding-top: 24px; }
   .footer code { display: inline-block; margin-top: 4px; word-break: break-all; }
+
+  body { font-family: var(--type) !important; background-color: var(--page-plane) !important;
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px) !important;
+    background-size: 24px 24px !important; }
+  h1, .status-text, .wordmark, .section-label, .readout-value, .stat-value, .method, .ep-tag, .status-pill, .ping-btn {
+    font-family: var(--display) !important; text-transform: uppercase; letter-spacing: .04em; }
+  h1 { background: none !important; color: var(--text-primary) !important; font-weight: 800; letter-spacing: .01em !important; font-size: clamp(44px, 7vw, 76px) !important; line-height: .92 !important; }
+  .wordmark-mark { background: none !important; border: 2.5px solid var(--text-primary); border-radius: 50% !important; width: 14px !important; height: 14px !important; }
+  .ep-card, .readout-tile, .card, .stat-tile { background: var(--surface) !important; backdrop-filter: none !important; border: 1.5px solid var(--border) !important; border-radius: 2px !important;
+    box-shadow: 5px 5px 0 -1.5px var(--surface), 5px 5px 0 0 var(--border) !important; }
+  .ep-card:hover { transform: translate(-2px,-3px) !important; box-shadow: 8px 9px 0 -1.5px var(--surface), 8px 9px 0 0 var(--border) !important; }
+  .status-pill { background: transparent !important; border: 1.5px solid currentColor !important; border-radius: 3px !important; }
+  .method { border-radius: 2px !important; }
+  .ping-btn { background: var(--text-primary) !important; color: var(--page-plane) !important; border-radius: 3px !important; box-shadow: 3px 3px 0 0 var(--critical); }
+  code { font-family: var(--type) !important; }
+  .footer, .endpoints { border-top: 3px double var(--border) !important; }
 </style>
 </head>
 <body>
@@ -214,12 +242,25 @@ _HEALTH_PAGE_HTML = """<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TimeLeak demo-app -- status</title>
+<title>TimeLeak demo-app status</title>
 <style>
+  @font-face { font-family: 'TL Display'; font-weight: 700; src: url('/static/fonts/BarlowCondensed-Bold.woff2') format('woff2'); font-display: swap; }
+  @font-face { font-family: 'TL Display'; font-weight: 800; src: url('/static/fonts/BarlowCondensed-ExtraBold.woff2') format('woff2'); font-display: swap; }
+  @font-face { font-family: 'TL Type'; font-weight: 400; src: url('/static/fonts/CourierPrime-Regular.woff2') format('woff2'); font-display: swap; }
+  @font-face { font-family: 'TL Type'; font-weight: 700; src: url('/static/fonts/CourierPrime-Bold.woff2') format('woff2'); font-display: swap; }
   :root {
-    --page-plane: #0a0714; --surface: #170f2b8f; --border: rgba(196,185,224,0.14);
-    --text-primary: #f4f0ff; --text-secondary: #c4b9e0; --text-muted: #9a8fc4;
-    --accent: #8b5cf6; --critical: #f43f5e; --good: #10b981;
+    --page-plane: #e9eef3; --surface: #f7f9fb; --border: #17202b; --grid: #cbd6e2;
+    --text-primary: #17202b; --text-secondary: #334155; --text-muted: #5b6878;
+    --accent: #1d4ed8; --critical: #c4122f; --good: #13795b; --warning: #a16207;
+    --display: 'TL Display', 'Arial Narrow', Impact, sans-serif; --type: 'TL Type', 'Courier New', monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page-plane: #0e1a2b; --surface: #13233a; --border: #e6edf6; --grid: #1c3150;
+      --text-primary: #e6edf6; --text-secondary: #c3cfdd; --text-muted: #8a9db5;
+      --accent: #7fa6ff; --critical: #ff5f6f; --good: #4fd6a0; --warning: #f5c451; color-scheme: dark;
+    }
   }
   * { box-sizing: border-box; }
   body {
@@ -257,6 +298,22 @@ _HEALTH_PAGE_HTML = """<!doctype html>
   .ping-result strong { color: var(--text-primary); }
   code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.85em; background: rgba(127,127,127,0.14); padding: 1px 6px; border-radius: 5px; }
   .endpoints { font-size: 12px; color: var(--text-muted); line-height: 2; border-top: 1px solid var(--border); padding-top: 16px; }
+
+  body { font-family: var(--type) !important; background-color: var(--page-plane) !important;
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px) !important;
+    background-size: 24px 24px !important; }
+  h1, .status-text, .wordmark, .section-label, .readout-value, .stat-value, .method, .ep-tag, .status-pill, .ping-btn {
+    font-family: var(--display) !important; text-transform: uppercase; letter-spacing: .04em; }
+  h1 { background: none !important; color: var(--text-primary) !important; font-weight: 800; letter-spacing: .01em !important; font-size: clamp(44px, 7vw, 76px) !important; line-height: .92 !important; }
+  .wordmark-mark { background: none !important; border: 2.5px solid var(--text-primary); border-radius: 50% !important; width: 14px !important; height: 14px !important; }
+  .ep-card, .readout-tile, .card, .stat-tile { background: var(--surface) !important; backdrop-filter: none !important; border: 1.5px solid var(--border) !important; border-radius: 2px !important;
+    box-shadow: 5px 5px 0 -1.5px var(--surface), 5px 5px 0 0 var(--border) !important; }
+  .ep-card:hover { transform: translate(-2px,-3px) !important; box-shadow: 8px 9px 0 -1.5px var(--surface), 8px 9px 0 0 var(--border) !important; }
+  .status-pill { background: transparent !important; border: 1.5px solid currentColor !important; border-radius: 3px !important; }
+  .method { border-radius: 2px !important; }
+  .ping-btn { background: var(--text-primary) !important; color: var(--page-plane) !important; border-radius: 3px !important; box-shadow: 3px 3px 0 0 var(--critical); }
+  code { font-family: var(--type) !important; }
+  .footer, .endpoints { border-top: 3px double var(--border) !important; }
 </style>
 </head>
 <body>

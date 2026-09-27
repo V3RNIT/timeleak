@@ -13,12 +13,7 @@ import os
 from datetime import datetime, timezone
 
 import chatbot
-
-ACCENT = "#8b5cf6"
-GOOD = "#10b981"
-CRITICAL = "#f43f5e"
-WARNING = "#fbbf24"
-
+import theme
 
 def _b64_image(path):
     with open(path, "rb") as f:
@@ -66,6 +61,11 @@ def generate_experiments_dashboard(precision, sensitivity, sample_size, output_d
     precision_status = "good" if fp == 0 else "critical"
     precision_headline = "0 false positives" if fp == 0 else f"{fp} false positive(s)"
 
+    if fp == 0:
+        precision_stamp = theme.stamp_html("Validated", f"0 of {runs} false positives", "clear", delay_ms=500)
+    else:
+        precision_stamp = theme.stamp_html("Review", f"{fp} of {runs} false positives", "warn", delay_ms=500)
+
     boundary = _min_detectable_delay(sensitivity["rows"])
     if boundary:
         sensitivity_headline = f"~{boundary['resulting_gap_ms']:.1f} ms gap"
@@ -108,6 +108,7 @@ def generate_experiments_dashboard(precision, sensitivity, sample_size, output_d
 {_CSS}
 {chatbot.CSS}
 </style>
+{theme.skin_style()}
 </head>
 <body>
 <div class="scroll-progress" id="scroll-progress"></div>
@@ -125,7 +126,8 @@ def generate_experiments_dashboard(precision, sensitivity, sample_size, output_d
 </div>
 
 <div class="page">
-  <header class="hero reveal" id="hero">
+  <header class="hero reveal" id="hero" data-thud>
+    <div class="stamp-slot">{precision_stamp}</div>
     <h1>Detector evaluation</h1>
     <p class="hero-sub">Three experiments characterizing TimeLeak itself: does it avoid false positives, how small a leak can it catch, and how many samples does it need. Generated {generated_at}.</p>
   </header>
@@ -180,6 +182,7 @@ def generate_experiments_dashboard(precision, sensitivity, sample_size, output_d
 <script>
 {_JS}
 {chatbot.JS}
+{theme.SKIN_JS}
 </script>
 </body>
 </html>

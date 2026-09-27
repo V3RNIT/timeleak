@@ -9,7 +9,7 @@ Web login and signup endpoints often behave *slightly* differently depending on 
 ## Project layout
 
 ```
-demo-app/          Flask + SQLite target app (3 vulnerable login variants + 1 patched + signup)
+demo-app/          Flask + SQLite target app (2 leaky login variants, 1 patched login, 1 leaky signup)
 detector/
   harness.py        Interleaved request sampling, precise timing
   analysis.py        Welch's t-test, Mann-Whitney U, Cohen's d, verdict logic
@@ -17,6 +17,7 @@ detector/
   experiments.py      Precision / sensitivity / sample-size evaluation studies
   dashboard.py         Combines the three experiments into one summary page
   index_builder.py      Builds the reports home page (detector/reports/index.html)
+  theme.py              Shared "Evidence File" design system used by every generated page
   main.py                 CLI entrypoint (scan / experiment / index)
   reports/                  Generated output lands here (gitignored)
 ```
@@ -51,6 +52,14 @@ python main.py scan --url http://localhost:5000/login/v1 --valid-user alice --in
 ```
 
 Prints a verdict to the console and writes an interactive HTML report to `detector/reports/`.
+
+**Scan the signup endpoint.** Signup registers every new email it sees, so the "doesn't exist" value must be fresh on every request. Put `{n}` in it and TimeLeak substitutes a unique value each time:
+
+```bash
+python main.py scan --url http://localhost:5000/signup --field email --valid-user alice@example.com --invalid-user "probe+{n}@example.com" --samples 50
+```
+
+If the target can't be reached, or more than 10% of requests fail, the scan stops with exit code 2 and writes no report, rather than reporting an unreachable server as "no leak".
 
 **Run an evaluation experiment:**
 
@@ -105,18 +114,6 @@ but expect wider variance than the local results above.
 `detector/reports/` (they're gitignored by default; `git add -f` a couple you like)
 and enable **GitHub Pages** (repo Settings → Pages → serve from the `detector/reports`
 folder) for a free, static, permanent link to show off your results.
-
-**GitHub setup**, if not done yet:
-
-```bash
-cd MINOR
-git init
-git add demo-app detector requirements.txt README.md .gitignore
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/<you>/timeleak.git
-git push -u origin main
-```
 
 ## Ethics
 

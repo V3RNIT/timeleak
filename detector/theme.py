@@ -79,7 +79,7 @@ def wordmark_html(sub=""):
     )
 
 
-BASE_CSS = r"""
+TOKENS_CSS = r"""
 :root {
   --paper: #e9eef3; --sheet: #f7f9fb; --grid: #cbd6e2; --grid-strong: #aebccc;
   --ink: #17202b; --ink-2: #334155; --faded: #5b6878;
@@ -107,6 +107,9 @@ BASE_CSS = r"""
   color-scheme: dark;
 }
 
+"""
+
+BASE_CSS = TOKENS_CSS + r"""
 *, *::before, *::after { box-sizing: border-box; }
 html { scroll-behavior: smooth; scroll-padding-top: calc(var(--nav-h) + 16px); -webkit-text-size-adjust: 100%; }
 body {
@@ -508,3 +511,222 @@ def page_head(title, meta_html="", extra_css=""):
 <style>
 {FONT_CSS}
 </style>"""
+
+
+# ---------------------------------------------------------------------------
+# Skin: re-dresses the existing report / dashboard / index markup in the
+# Evidence File look without rewriting it. Loaded AFTER each page's own CSS.
+# Every rule is scoped under `:root:not(#tl)` -- specificity (1,1,0) -- so it
+# outranks the old per-theme blocks (at most (0,2,1)) without !important.
+# ---------------------------------------------------------------------------
+_S = ":root:not(#tl)"
+
+_SKIN_CSS_TEMPLATE = r"""
+@S {
+  --page-plane: var(--paper); --surface-1: var(--sheet); --surface-solid: var(--sheet);
+  --text-primary: var(--ink); --text-secondary: var(--ink-2); --text-muted: var(--faded);
+  --border: var(--grid-strong); --gridline: var(--grid);
+  --good: var(--clear); --critical: var(--stamp); --warning: var(--warn); --accent: var(--valid);
+}
+@S body {
+  background-color: var(--paper);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px; background-position: -1px -1px;
+  font-family: var(--type); color: var(--ink);
+}
+@S ::selection { background: var(--marker); color: var(--ink); }
+@S code { font-family: var(--type); background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink); border-radius: 3px; }
+
+/* display type */
+@S h1, @S h2, @S h3, @S .section-title, @S .headline-value, @S .summary-value, @S .stat-tile-value,
+@S .ring-value, @S .donut-value, @S .report-card-endpoint, @S .race-time {
+  font-family: var(--display); font-weight: 800; letter-spacing: .01em;
+}
+@S h1, @S h2, @S .section-title { text-transform: uppercase; }
+@S .hero h1 { font-size: clamp(48px, 8vw, 96px); line-height: .9; background: none; color: var(--ink); -webkit-text-fill-color: currentColor; }
+@S .verdict h1 { font-size: clamp(44px, 7vw, 84px); line-height: .9; }
+@S h2 { font-size: 26px; letter-spacing: .03em; }
+@S .section-title { font-size: 30px; color: var(--ink); }
+@S .stat-tile-value, @S .summary-value, @S .headline-value { font-size: clamp(34px, 4.4vw, 52px); line-height: .95; }
+@S .stat-tile-label, @S .summary-label, @S .headline-label, @S .verdict-badge, @S .ring-caption, @S .qa-label {
+  font-family: var(--display); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; font-size: 13px; color: var(--faded);
+}
+
+/* sheets instead of glass cards */
+@S .card, @S .stat-tile, @S .summary-tile, @S .headline-card {
+  background: var(--sheet); border: 1.5px solid var(--ink); border-radius: 2px;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow: 6px 6px 0 -1.5px var(--sheet), 6px 6px 0 0 var(--ink);
+}
+@S .headline-card { border-top-width: 6px; }
+@S .headline-good { border-top-color: var(--clear); } @S .headline-critical { border-top-color: var(--stamp); } @S .headline-accent { border-top-color: var(--ink); }
+@S .report-card { transition: transform .3s cubic-bezier(.2,.8,.2,1), box-shadow .3s; border-left-width: 1.5px; }
+@S .report-card::before { content: ""; position: absolute; top: -9px; left: 16px; width: 72px; height: 9px; background: var(--sheet); border: 1.5px solid var(--ink); border-bottom: 0; border-radius: 3px 3px 0 0; }
+@S .report-card { position: relative; overflow: visible; margin-top: 9px; }
+@S .report-card:hover { transform: translate(-3px, -4px); box-shadow: 10px 11px 0 -1.5px var(--sheet), 10px 11px 0 0 var(--ink); }
+@S .report-card.status-critical { border-left: 6px solid var(--stamp); }
+@S .report-card.status-good { border-left: 6px solid var(--clear); }
+
+/* nav */
+@S .topbar { background: color-mix(in srgb, var(--paper) 84%, transparent); border-bottom: 1px solid var(--grid-strong); backdrop-filter: saturate(1.4) blur(14px); }
+@S .wordmark { font-family: var(--display); font-weight: 800; font-size: 22px; letter-spacing: .03em; text-transform: uppercase; color: var(--ink); }
+@S .wordmark-mark { display: inline-block; flex: none; box-sizing: border-box; width: 16px; height: 16px; border-radius: 50%; background: none; border: 2.5px solid var(--ink); position: relative; }
+@S .wordmark-mark::after { content: ""; position: absolute; left: 5px; top: 1px; width: 2px; height: 6px; background: var(--ink); transform-origin: 1px 5px; animation: tl-tick 4s steps(12) infinite; }
+@keyframes tl-tick { to { transform: rotate(360deg); } }
+@S .scroll-progress { background: var(--stamp); height: 3px; }
+
+/* buttons, tabs, inputs */
+@S .replay-btn, @S .export-btn, @S .copy-btn, @S .samples-toggle, @S .pill-link, @S .icon-btn, @S .theme-toggle, @S .sort-select, @S .search-input, @S .chip-group .chip {
+  font-family: var(--display); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; font-size: 13.5px;
+  color: var(--ink); background: var(--sheet); border: 1.5px solid var(--ink); border-radius: 3px;
+  box-shadow: 2px 2px 0 0 var(--ink); transition: transform .15s ease, box-shadow .15s ease, background .15s, color .15s;
+}
+@S .search-input { text-transform: none; letter-spacing: .02em; font-family: var(--type); }
+@S .replay-btn:hover, @S .export-btn:hover, @S .copy-btn:hover, @S .samples-toggle:hover, @S .pill-link:hover, @S .icon-btn:hover, @S .theme-toggle:hover {
+  transform: translate(-1px, -1px); box-shadow: 3px 3px 0 0 var(--ink); background: var(--sheet);
+}
+@S .replay-btn:active, @S .export-btn:active, @S .copy-btn:active, @S .pill-link:active { transform: translate(2px, 2px); box-shadow: 0 0 0 0 var(--ink); }
+@S .theme-toggle, @S .icon-btn { border-radius: 50%; }
+@S .chip-group { background: transparent; border: 0; gap: 6px; padding: 0; }
+@S .chip-group .chip.is-active { background: var(--ink); color: var(--paper); }
+@S .tabs { background: var(--sheet); border: 1.5px solid var(--ink); border-radius: 3px; padding: 3px; }
+@S .tab { font-family: var(--display); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; font-size: 14px; border-radius: 2px; color: var(--ink); background: transparent; }
+@S .tab.is-active { background: var(--ink); color: var(--paper); box-shadow: none; }
+
+/* pills & badges */
+@S .chip-critical, @S .chip-good, @S .badge, @S .topbar-pill, @S .verdict-badge, @S .demo-status {
+  font-family: var(--display); font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  background: transparent; border: 1.5px solid currentColor; border-radius: 3px;
+}
+@S .chip-critical, @S .badge-critical, @S .topbar-pill-critical { color: var(--stamp); }
+@S .chip-good, @S .badge-good, @S .topbar-pill-good { color: var(--clear); }
+@S .verdict-badge { display: none; }
+
+/* verdict */
+@S .verdict { border-left: 1.5px solid var(--ink); overflow: visible; }
+@S .verdict-critical { border-top: 6px solid var(--stamp); }
+@S .verdict-good { border-top: 6px solid var(--clear); }
+@S .verdict-icon { display: none; }
+@S .verdict-sentence { font-size: 17px; color: var(--ink-2); max-width: 60ch; }
+@S .ring-track { stroke: var(--grid); }
+@S .ring-fill-critical { stroke: var(--stamp); } @S .ring-fill-good { stroke: var(--clear); }
+
+/* data colours: valid = blue ink, invalid = amber */
+@S .bar-valid, @S .race-dot-valid, @S .seq-tick.seq-valid { fill: var(--valid); background: var(--valid); }
+@S .bar-invalid, @S .race-dot-invalid, @S .seq-tick.seq-invalid { fill: var(--invalid); background: var(--invalid); }
+@S [style*="#8b5cf6"] { background: var(--valid); }
+@S [style*="#ec4899"] { background: var(--invalid); }
+@S .race-dot { box-shadow: none; }
+@S .race-node { font-family: var(--display); letter-spacing: .1em; text-transform: uppercase; border: 1.5px solid var(--ink); border-radius: 3px; background: var(--sheet); }
+@S .race-path { background: repeating-linear-gradient(90deg, var(--grid-strong) 0 6px, transparent 6px 12px); height: 2px; }
+@S .axis-label, @S .axis-title { fill: var(--faded); font-family: var(--type); }
+@S .gridline { stroke: var(--grid); }
+@S .donut-fill { stroke: var(--stamp); } @S .donut-track { stroke: var(--grid); }
+
+/* tables */
+@S .stats-table, @S .samples-table { font-family: var(--type); font-variant-numeric: tabular-nums; }
+@S .stats-table th, @S .samples-table th { font-family: var(--display); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--faded); }
+@S .stats-table td, @S .stats-table th, @S .samples-table td, @S .samples-table th { border-color: var(--grid-strong); }
+@S .samples-table tbody tr:hover, @S .stats-table tbody tr:hover { background: color-mix(in srgb, var(--marker) 45%, transparent); }
+@S .test-row { background: color-mix(in srgb, var(--ink) 5%, transparent); border-radius: 2px; }
+
+/* misc report parts */
+@S .scenario-num { font-family: var(--display); font-weight: 800; font-size: 34px; background: none; color: transparent; -webkit-text-stroke: 1.5px var(--ink); width: auto; height: auto; }
+@S .check-icon { color: var(--clear); background: transparent; border: 1.5px solid var(--clear); }
+@S .dot-nav-item { border-radius: 1px; background: var(--grid-strong); }
+@S .dot-nav-item.is-active { background: var(--ink); }
+@S .toast { background: var(--ink); color: var(--paper); font-family: var(--display); letter-spacing: .1em; text-transform: uppercase; border-radius: 3px; }
+@S .tooltip, @S .info-popover { background: var(--ink); color: var(--paper); border-radius: 3px; font-family: var(--type); }
+@S .info-btn { border: 1.5px solid var(--faded); color: var(--faded); background: transparent; font-family: var(--type); }
+@S .exp-chart { border: 1.5px solid var(--ink); border-radius: 2px; background: #fff; }
+@S .lightbox { background: var(--scrim); }
+@S .qa-code { background: var(--paper); border: 1px dashed var(--grid-strong); border-radius: 2px; }
+@S .footer { border-top: 3px double var(--ink); font-family: var(--type); color: var(--faded); }
+@S .footer a, @S .reference-links a { color: var(--ink); }
+@S .demo-status-dot { box-shadow: none; }
+
+/* marker highlight + stamp (see theme BASE_CSS for the full versions) */
+@S .mark { background-image: linear-gradient(transparent 58%, var(--marker) 58%, var(--marker) 92%, transparent 92%); background-repeat: no-repeat; background-size: 100% 100%; padding: 0 2px; }
+html.js .mark { background-size: 0% 100%; transition: background-size 1s cubic-bezier(.6,.1,.2,1) .4s; }
+html.js .mark.is-in { background-size: 100% 100%; }
+.stamp-slot { display: flex; justify-content: flex-end; }
+.hero .stamp-slot { float: right; margin: 6px 10px 12px 20px; }
+@media (max-width: 640px) { .hero .stamp-slot { float: none; justify-content: flex-start; margin: 0 0 18px 6px; } }
+@S .stamp {
+  --c: var(--stamp); display: inline-grid; justify-items: center; gap: 3px; color: var(--c);
+  border: 5px double var(--c); border-radius: 6px; padding: 8px 18px 6px; transform: rotate(-7deg);
+  font-family: var(--display); font-weight: 800; text-transform: uppercase; line-height: .9; white-space: nowrap;
+}
+@S .stamp-clear { --c: var(--clear); } @S .stamp-warn { --c: var(--warn); }
+.stamp-word { font-size: clamp(30px, 4.4vw, 48px); letter-spacing: .06em; }
+.stamp-sub { font-size: 12.5px; letter-spacing: .26em; }
+html.js .stamp.will-stamp { opacity: 0; }
+html.js .stamp.is-stamped { animation: tl-stamp .5s cubic-bezier(.25,1.6,.45,1) both; }
+@keyframes tl-stamp { 0% { opacity: 0; transform: rotate(-7deg) scale(2.4); } 60% { opacity: 1; } 100% { opacity: 1; transform: rotate(-7deg) scale(1); } }
+.thud { animation: tl-thud .35s ease-out; }
+@keyframes tl-thud { 0%,100% { transform: none; } 30% { transform: translateY(3px); } 60% { transform: translateY(-1px); } }
+
+/* assistant widget */
+@S .tl-fab { background: var(--ink); color: var(--paper); border-radius: 4px; animation: none; box-shadow: 3px 3px 0 0 var(--stamp); }
+@S .tl-fab:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 0 var(--stamp); }
+@S .tl-panel { background: var(--sheet); border: 1.5px solid var(--ink); border-radius: 2px; box-shadow: 8px 8px 0 -1.5px var(--sheet), 8px 8px 0 0 var(--ink); font-family: var(--type); }
+@S .tl-panel-title { font-family: var(--display); font-weight: 800; font-size: 18px; letter-spacing: .06em; text-transform: uppercase; }
+@S .tl-panel-dot { box-shadow: none; }
+@S .tl-msg { border-radius: 2px; font-family: var(--type); }
+@S .tl-msg-bot { background: color-mix(in srgb, var(--marker) 55%, transparent); color: var(--ink); }
+@S .tl-msg-user { background: var(--ink); color: var(--paper); }
+@S .tl-typing { background: color-mix(in srgb, var(--marker) 55%, transparent); border-radius: 2px; }
+@S .tl-chip { font-family: var(--display); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; border: 1.5px solid var(--ink); border-radius: 3px; color: var(--ink); background: transparent; }
+@S .tl-chip:hover { background: var(--ink); color: var(--paper); }
+@S .tl-input { font-family: var(--type); border-radius: 3px; border: 1.5px solid var(--grid-strong); background: var(--paper); }
+@S .tl-input:focus { border-color: var(--ink); }
+@S .tl-send { background: var(--ink); color: var(--paper); border-radius: 3px; }
+
+@media print {
+  @S body { background: #fff; }
+  html.js .stamp.will-stamp { opacity: 1; }
+  html.js .mark { background-size: 100% 100%; }
+}
+"""
+
+SKIN_CSS = TOKENS_CSS + _SKIN_CSS_TEMPLATE.replace("@S", _S)
+
+SKIN_JS = r"""
+(function () {
+  var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  function stamp(el) {
+    el.classList.remove('will-stamp'); el.classList.add('is-stamped');
+    var host = el.closest('[data-thud]');
+    if (host && !reduced) { host.classList.remove('thud'); void host.offsetWidth; host.classList.add('thud'); }
+  }
+  var stamps = document.querySelectorAll('.stamp[data-auto-stamp]');
+  var marks = document.querySelectorAll('.mark');
+  if (!('IntersectionObserver' in window)) { marks.forEach(function (m) { m.classList.add('is-in'); }); return; }
+  stamps.forEach(function (s) {
+    s.classList.add('will-stamp');
+    var delay = parseInt(s.getAttribute('data-auto-stamp'), 10) || 0;
+    var o = new IntersectionObserver(function (en) {
+      if (en[0].isIntersecting) { o.disconnect(); setTimeout(function () { stamp(s); }, delay); }
+    }, { threshold: .5 });
+    o.observe(s);
+  });
+  var mo = new IntersectionObserver(function (en) {
+    en.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('is-in'); mo.unobserve(e.target); } });
+  }, { threshold: .6 });
+  marks.forEach(function (m) { mo.observe(m); });
+})();
+"""
+
+
+def skin_style():
+    """<style> blocks to place after a page's own CSS: fonts, palette, skin."""
+    return f"<style>\n{FONT_CSS}\n</style>\n<style>\n{SKIN_CSS}\n</style>"
+
+
+def stamp_html(word, sub, kind="leak", delay_ms=250):
+    """Rubber-stamp verdict. kind: 'leak' (red), 'clear' (green), 'warn'."""
+    cls = {"leak": "", "clear": " stamp-clear", "warn": " stamp-warn"}.get(kind, "")
+    return (
+        f'<div class="stamp{cls}" data-auto-stamp="{delay_ms}" role="img" aria-label="{word}, {sub}">'
+        f'<span class="stamp-word">{word}</span><span class="stamp-sub">{sub}</span></div>'
+    )

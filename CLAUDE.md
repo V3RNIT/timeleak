@@ -25,6 +25,9 @@ detector/
   dashboard.py       Combines the three experiments into one page
   index_builder.py   Builds detector/reports/index.html (home page linking everything)
   chatbot.py         Universal chatbot widget injected into every generated page
+  theme.py           "Evidence File" design system: palette tokens, embedded fonts, skin CSS/JS,
+                     stamp helper. Every page loads theme.skin_style() after its own CSS.
+  assets/fonts/      Barlow Condensed + Courier Prime woff2 (SIL OFL), inlined into pages
   main.py            CLI: scan / experiment / index
   reports/           Generated output (gitignored)
 TimeLeak_Project_Synopsis.docx, TimeLeak_Synopsis_Presentation.pptx   College deliverables
@@ -42,6 +45,9 @@ python main.py index
 ```
 
 Expected: v1 and v2 -> LEAK DETECTED, v3 -> no significant leak.
+Signup: `python main.py scan --url http://127.0.0.1:5000/signup --field email --valid-user alice@example.com --invalid-user "probe+{n}@example.com"`
+(`{n}` is replaced with a fresh value per request; without it the first request registers the email).
+A scan aborts (exit 2, no report) if the target is unreachable or >10% of requests fail.
 There is no automated test suite yet; `pytest` tests under `tests/` would be welcome.
 
 ## Detection logic (do not weaken without discussion)
@@ -56,9 +62,14 @@ There is no automated test suite yet; `pytest` tests under `tests/` would be wel
 ## UI conventions for generated HTML
 
 - Pages must be fully self-contained: inline CSS/JS/SVG, no CDNs, no external fonts.
-- Dark violet theme everywhere: BG #0a0714, SURFACE #170f2b, GRID #2a2140,
-  ACCENT #8b5cf6, GOOD #10b981, CRITICAL #f43f5e, WARNING #fbbf24,
-  TEXT #f4f0ff, TEXT_MUTED #9a8fc4. Keep themes consistent across all pages.
+- "Evidence File" look everywhere (theme.py is the source of truth): graph-paper background,
+  Courier Prime body text, Barlow Condensed uppercase headings, sheets with an offset
+  paper-stack shadow, rubber-stamp verdicts. Paper (light, default) and Blueprint (dark) themes
+  via tokens --paper/--sheet/--grid/--ink/--faded; data colours --valid (blue ink) vs --invalid
+  (amber); verdict colours --stamp (leak) and --clear (clean). Don't reintroduce the old violet glass.
+- Don't show 1 - p as a "confidence" percentage; confidence is the analysis label (high/moderate/none).
+- Matplotlib charts use the paper palette (white sheet) so they read in both page themes.
+- The demo app serves its fonts from demo-app/static/fonts (copies of detector/assets/fonts).
 - Links between pages open in a new tab: `target="_blank" rel="noopener noreferrer"`.
 - Content must stay visible without JS (`.reveal` hiding is gated behind `html.js`).
 - Exports use Blob downloads, not window.open. Every page includes the chatbot widget.

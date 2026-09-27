@@ -4,7 +4,7 @@ TimeLeak HTML report generator.
 Renders a self-contained (no external CDN/network dependency) HTML report
 from a harness sample set + analysis.analyze() result: overlaid response-
 time and response-size histograms behind a segmented tab switch, a
-confidence-ring + effect-size-meter widget set, a stats table, and a clear
+rubber-stamp verdict + effect-size-meter widget set, a stats table, and a clear
 leak/no-leak verdict banner.
 """
 import html
@@ -15,16 +15,15 @@ from datetime import datetime, timezone
 import numpy as np
 
 import chatbot
+import theme
 
-# --- design tokens (validated categorical + status palette; see detector's
-# dataviz reference) -- violet/magenta jewel-tone theme, CVD-checked via
-# the dataviz skill's validate_palette.js (ALL CHECKS PASS at ΔE 15.4/22.6
-# for the valid/invalid pair against the #150f28 dark surface) -----------
-COLOR_VALID = "#8b5cf6"     # categorical slot 1 (violet) -- dark-mode step
-COLOR_INVALID = "#ec4899"   # categorical slot 2 (magenta) -- dark-mode step
-COLOR_GOOD = "#10b981"      # status: good (no leak) -- emerald
-COLOR_CRITICAL = "#f43f5e"  # status: critical (leak) -- dark-mode step, rose
-COLOR_WARNING = "#fbbf24"   # status: warning (meter mid-zone) -- amber
+# --- design tokens: CSS variables from theme.py's Evidence File palette, so
+# inline swatches follow the paper / blueprint theme switch -----------------
+COLOR_VALID = "var(--valid)"      # blue ink
+COLOR_INVALID = "var(--invalid)"  # amber
+COLOR_GOOD = "var(--clear)"
+COLOR_CRITICAL = "var(--stamp)"
+COLOR_WARNING = "var(--warn)"
 
 N_BINS = 20
 
@@ -48,9 +47,19 @@ _INFO_COHENS_D = _info_btn(
 
 
 def _fmt_p(p):
+    """Full expression, e.g. 'p &lt; 0.0001 (3.02e-11)' or 'p = 0.5793'."""
     if p < 0.0001:
-        return f"&lt; 0.0001 ({p:.2e})"
-    return f"{p:.4f}"
+        return f"p &lt; 0.0001 ({p:.2e})"
+    return f"p = {p:.4f}"
+
+
+def _verdict_stamp(verdict):
+    conf = verdict["confidence_level"]
+    if verdict["leak_detected"]:
+        return theme.stamp_html("Enumerable", f"{conf} confidence", "leak", delay_ms=350)
+    if "negligible" in conf:
+        return theme.stamp_html("Negligible", "below practical threshold", "warn", delay_ms=350)
+    return theme.stamp_html("Cleared", "no significant leak", "clear", delay_ms=350)
 
 
 def _fmt_ms(x):
@@ -220,20 +229,6 @@ def _verdict_copy(verdict):
     return headline, status_class, icon, sentence
 
 
-def _confidence_ring_svg(pct, status_class, size=136, stroke=10):
-    r = (size - stroke) / 2
-    circumference = 2 * np.pi * r
-    center = size / 2
-    return f'''
-<svg class="ring-svg" width="{size}" height="{size}" viewBox="0 0 {size} {size}" role="img" aria-label="Statistical confidence: {pct:.1f} percent">
-  <circle class="ring-track" cx="{center}" cy="{center}" r="{r}" stroke-width="{stroke}" fill="none"/>
-  <circle class="ring-fill ring-fill-{status_class}" cx="{center}" cy="{center}" r="{r}" stroke-width="{stroke}" fill="none"
-          stroke-linecap="round" transform="rotate(-90 {center} {center})"
-          style="--circumference:{circumference:.2f}" data-target="{pct:.1f}"/>
-</svg>
-'''
-
-
 def _effect_meter_html(d_value, label):
     ad = min(abs(d_value), 1.4)
     pct = min(100, (ad / 1.2) * 100)
@@ -272,7 +267,7 @@ def _build_sequence_csv(sequence_data):
 def _p_chip_html(p_value, significant):
     cls = "chip-critical" if significant else "chip-good"
     text = _fmt_p(p_value)
-    return f'<span class="chip {cls}">p = {text}</span>'
+    return f'<span class="chip {cls}">{text}</span>'
 
 
 def generate_report(
@@ -323,9 +318,6 @@ def generate_report(
     n_per_group = timing["valid"]["n"]
     total_requests = n_per_group + timing["invalid"]["n"]
 
-    primary_p = min(verdict["timing_p_value"], verdict["size_p_value"])
-    confidence_pct = max(0.0, min(99.9, (1 - primary_p) * 100))
-    ring_svg = _confidence_ring_svg(confidence_pct, status_class)
 
     timing_meter = _effect_meter_html(verdict["timing_effect_size"], verdict["timing_effect_label"])
     timing_p_chip = _p_chip_html(verdict["timing_p_value"], verdict["timing_leak_detected"])
@@ -381,7 +373,7 @@ def generate_report(
             "answer": (
                 f"This report scanned {endpoint_label} and found it {verdict_word} information about "
                 f"which usernames exist. Confidence: {verdict['confidence_level']}. Timing p-value: "
-                f"{_fmt_p(verdict['timing_p_value']).replace('&lt;', '<')}, Cohen's d: {verdict['timing_effect_size']:.2f} "
+                f"{_fmt_p(verdict['timing_p_value']).replace('&lt;', '<').replace('p ', '', 1)}, Cohen's d: {verdict['timing_effect_size']:.2f} "
                 f"({verdict['timing_effect_label']}). Size delta: {verdict['size_delta_bytes']:.1f} bytes."
             ),
         }],
@@ -404,6 +396,7 @@ def generate_report(
 {_CSS}
 {chatbot.CSS}
 </style>
+{theme.skin_style()}
 </head>
 <body>
 <div class="scroll-progress" id="scroll-progress"></div>
@@ -448,7 +441,7 @@ def generate_report(
     </div>
   </header>
 
-  <section class="card verdict verdict-{status_class} reveal" id="verdict" aria-live="polite">
+  <section class="card verdict verdict-{status_class} reveal" id="verdict" aria-live="polite" data-thud>
     <div class="verdict-left">
       <div class="verdict-icon">
         <svg viewBox="0 0 24 24" width="36" height="36" aria-hidden="true">{icon_svg}</svg>
@@ -457,15 +450,11 @@ def generate_report(
         <div class="verdict-badge">{status_class.upper()}</div>
         <h1>{headline}</h1>
         <p class="verdict-sentence">{sentence}</p>
-        <p class="verdict-confidence">Confidence level: <strong>{html.escape(verdict['confidence_level'])}</strong></p>
+        <p class="verdict-confidence">Confidence level: <strong class="mark">{html.escape(verdict['confidence_level'])}</strong></p>
       </div>
     </div>
-    <div class="verdict-ring">
-      {ring_svg}
-      <div class="ring-label">
-        <span class="ring-value count-up" data-target="{confidence_pct:.1f}" data-suffix="%">0%</span>
-        <span class="ring-caption">statistical<br>confidence</span>
-      </div>
+    <div class="stamp-slot">
+      {_verdict_stamp(verdict)}
     </div>
   </section>
 
@@ -514,8 +503,8 @@ def generate_report(
         </tbody>
       </table>
       <div class="test-results">
-        <div class="test-row"><span>Welch's t-test{_INFO_WELCH}</span><strong>p = {_fmt_p(verdict['timing_welch_p_value'])}</strong></div>
-        <div class="test-row"><span>Mann-Whitney U{_INFO_MANNWHITNEY}</span><strong>p = {_fmt_p(verdict['timing_p_value'])}</strong></div>
+        <div class="test-row"><span>Welch's t-test{_INFO_WELCH}</span><strong>{_fmt_p(verdict['timing_welch_p_value'])}</strong></div>
+        <div class="test-row"><span>Mann-Whitney U{_INFO_MANNWHITNEY}</span><strong>{_fmt_p(verdict['timing_p_value'])}</strong></div>
       </div>
       {timing_meter}
     </div>
@@ -535,7 +524,7 @@ def generate_report(
         </tbody>
       </table>
       <div class="test-results">
-        <div class="test-row"><span>Mann-Whitney U{_INFO_MANNWHITNEY}</span><strong>p = {_fmt_p(verdict['size_p_value'])}</strong></div>
+        <div class="test-row"><span>Mann-Whitney U{_INFO_MANNWHITNEY}</span><strong>{_fmt_p(verdict['size_p_value'])}</strong></div>
         <div class="test-row"><span>Mean size delta</span><strong class="count-up" data-target="{verdict['size_delta_bytes']:.1f}" data-suffix=" bytes">0 bytes</strong></div>
       </div>
     </div>
@@ -685,6 +674,7 @@ def generate_report(
 <script>
 {_JS}
 {chatbot.JS}
+{theme.SKIN_JS}
 </script>
 </body>
 </html>

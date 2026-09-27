@@ -15,6 +15,7 @@ import re
 from datetime import datetime
 
 import chatbot
+import theme
 
 _META_RE = re.compile(r'<meta name="timeleak:([\w-]+)" content="([^"]*)">')
 
@@ -198,11 +199,12 @@ def build_index(reports_dir=None):
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="timeleak:kind" content="index">
-<title>TimeLeak</title>
+<title>TimeLeak Case Index</title>
 <style>
 {_CSS}
 {chatbot.CSS}
 </style>
+{theme.skin_style()}
 </head>
 <body>
 <div class="scroll-progress" id="scroll-progress"></div>
@@ -226,7 +228,7 @@ def build_index(reports_dir=None):
     <span class="demo-status" id="demo-status" data-demo-url="{DEMO_APP_URL}/health">
       <span class="demo-status-dot"></span><span id="demo-status-text">Checking demo app&hellip;</span>
     </span>
-    <h1>Reports home</h1>
+    <h1>Case index</h1>
     <p class="hero-sub">Every scan and evaluation you've generated, in one place. Click a card to open it in a new tab &mdash; this hub stays put.</p>
     <div class="hero-actions">
       <a class="pill-link" href="{DEMO_APP_URL}" target="_blank" rel="noopener noreferrer">Open demo app ↗</a>
@@ -325,6 +327,7 @@ def build_index(reports_dir=None):
 <script>
 {_JS}
 {chatbot.JS}
+{theme.SKIN_JS}
 </script>
 </body>
 </html>
