@@ -6,6 +6,15 @@ A side-channel timing and response-size leakage detector for web authentication 
 
 Web login and signup endpoints often behave *slightly* differently depending on whether a submitted username or email exists — a faster or slower response, a longer or shorter error message. That difference is [CWE-203: Observable Discrepancy](https://cwe.mitre.org/data/definitions/203.html): an information leak that lets an attacker enumerate valid accounts without ever guessing a password, just by watching how the server responds. TimeLeak has two parts: a deliberately vulnerable Flask demo app (`/demo-app`) that reproduces this flaw in three different forms plus a patched control, and a statistical detector (`/detector`) that scans an endpoint, measures timing and response size, and tells you with a p-value and effect size whether it leaks.
 
+## Quick start (one command)
+
+```bash
+pip install -r requirements.txt
+python run.py
+```
+
+`run.py` reseeds and starts the demo app, scans all four endpoints, runs a quick evaluation, and opens the **Case Index** (`detector/reports/index.html`). That page is the home page for everything the run produced: each scan report, the evaluation dashboard, and the live demo app. Every report and dashboard links back to it. Flags: `--samples N`, `--full-eval`, `--skip-eval`, `--no-browser`, `--exit`.
+
 ## Project layout
 
 ```
@@ -20,6 +29,8 @@ detector/
   theme.py              Shared "Evidence File" design system used by every generated page
   main.py                 CLI entrypoint (scan / experiment / index)
   reports/                  Generated output lands here (gitignored)
+tests/              pytest suite: statistics, harness, report + seal, demo app
+run.py              One-command demo (demo app + all scans + evaluation + Case Index)
 ```
 
 ## Setup
@@ -61,6 +72,8 @@ python main.py scan --url http://localhost:5000/signup --field email --valid-use
 
 If the target can't be reached, or more than 10% of requests fail, the scan stops with exit code 2 and writes no report, rather than reporting an unreachable server as "no leak".
 
+Every report carries an **evidence seal**: the SHA-256 of its raw-samples CSV, printed in the Methodology section and stored in the page's metadata. Check a downloaded copy with `sha256sum timeleak_samples.csv`; any edit to the data changes the fingerprint.
+
 **Run an evaluation experiment:**
 
 ```bash
@@ -79,6 +92,15 @@ python main.py index
 ```
 
 `scan` and `experiment` already rebuild it automatically. Open `detector/reports/index.html` in a browser — it lists every scan report and evaluation dashboard you've generated, each opening in a new tab.
+
+## Tests
+
+```bash
+pip install pytest
+python -m pytest
+```
+
+The suite covers the verdict rules (dual-test agreement, the effect-size gate, the size threshold, NaN and zero-variance edge cases), the harness checks (fresh `{n}` values, aborting on unreachable targets), report generation including the evidence seal and Case Index links, and the demo app's documented behaviour. It needs no running server.
 
 ## Deployment
 

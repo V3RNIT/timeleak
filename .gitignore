@@ -29,3 +29,4 @@ Thumbs.db
 
 # Stray file from an unquoted `pip install gunicorn>=22.0`
 =22.0
+*.log

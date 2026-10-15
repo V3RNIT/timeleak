@@ -30,6 +30,8 @@ detector/
   assets/fonts/      Barlow Condensed + Courier Prime woff2 (SIL OFL), inlined into pages
   main.py            CLI: scan / experiment / index
   reports/           Generated output (gitignored)
+tests/               pytest suite (analysis, harness, report + seal, demo app)
+run.py               One-command demo: demo app + all scans + quick evaluation + Case Index
 TimeLeak_Project_Synopsis.docx, TimeLeak_Synopsis_Presentation.pptx   College deliverables
 ```
 
@@ -48,7 +50,9 @@ Expected: v1 and v2 -> LEAK DETECTED, v3 -> no significant leak.
 Signup: `python main.py scan --url http://127.0.0.1:5000/signup --field email --valid-user alice@example.com --invalid-user "probe+{n}@example.com"`
 (`{n}` is replaced with a fresh value per request; without it the first request registers the email).
 A scan aborts (exit 2, no report) if the target is unreachable or >10% of requests fail.
-There is no automated test suite yet; `pytest` tests under `tests/` would be welcome.
+`python run.py --no-browser --exit` runs the whole demo end to end (~1 min).
+Tests: `python -m pytest` (tests/ needs no server; keep it green before pushing).
+Reports carry an evidence seal: SHA-256 of the samples CSV (meta timeleak:seal + Methodology).
 
 ## Detection logic (do not weaken without discussion)
 

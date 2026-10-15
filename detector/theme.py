@@ -640,6 +640,7 @@ _SKIN_CSS_TEMPLATE = r"""
 @S .info-btn { border: 1.5px solid var(--faded); color: var(--faded); background: transparent; font-family: var(--type); }
 @S .exp-chart { border: 1.5px solid var(--ink); border-radius: 2px; background: #fff; }
 @S .lightbox { background: var(--scrim); }
+@S .seal-hash { word-break: break-all; }
 @S .qa-code { background: var(--paper); border: 1px dashed var(--grid-strong); border-radius: 2px; }
 @S .footer { border-top: 3px double var(--ink); font-family: var(--type); color: var(--faded); }
 @S .footer a, @S .reference-links a { color: var(--ink); }

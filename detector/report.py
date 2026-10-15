@@ -7,6 +7,7 @@ time and response-size histograms behind a segmented tab switch, a
 rubber-stamp verdict + effect-size-meter widget set, a stats table, and a clear
 leak/no-leak verdict banner.
 """
+import hashlib
 import html
 import json
 import os
@@ -326,6 +327,9 @@ def generate_report(
     sequence_data = _build_sequence_data(valid_records, invalid_records)
     sequence_json = json.dumps(sequence_data).replace("</", "<\\/")
     sequence_csv = _build_sequence_csv(sequence_data)
+    # Evidence seal: fingerprint of exactly what "Download CSV" saves, so a
+    # downloaded copy can be checked against the report (sha256sum file.csv).
+    data_seal = hashlib.sha256(sequence_csv.encode("utf-8")).hexdigest()
 
     timing_gap_ms = abs(timing["valid"]["mean"] - timing["invalid"]["mean"])
     try:
@@ -391,6 +395,7 @@ def generate_report(
 <meta name="timeleak:target" content="{safe_url}">
 <meta name="timeleak:confidence" content="{html.escape(verdict['confidence_level'])}">
 <meta name="timeleak:generated" content="{now.isoformat()}">
+<meta name="timeleak:seal" content="{data_seal}">
 <title>TimeLeak Report — {safe_endpoint}</title>
 <style>
 {_CSS}
@@ -402,7 +407,7 @@ def generate_report(
 <div class="scroll-progress" id="scroll-progress"></div>
 <div class="topbar">
   <div class="topbar-inner">
-    <div class="wordmark"><span class="wordmark-mark"></span><span>TimeLeak</span></div>
+    <a class="wordmark" href="index.html" title="Back to the Case Index" style="text-decoration:none"><span class="wordmark-mark"></span><span>TimeLeak</span></a>
     <div class="topbar-right">
       <div class="topbar-pill topbar-pill-{status_class}">
         <span class="topbar-dot"></span>{headline}
@@ -649,6 +654,7 @@ def generate_report(
       <li>Timing measured with <code>time.perf_counter()</code> (monotonic wall-clock)</li>
       <li>Significance threshold: α = 0.05, both Welch's t-test and Mann-Whitney U required to agree</li>
       <li>Effect size below Cohen's d = 0.2 is treated as practically negligible even if statistically significant</li>
+      <li>Evidence seal (SHA-256 of the raw-samples CSV): <code class="seal-hash">{data_seal}</code>. Check a downloaded copy with <code>sha256sum timeleak_samples.csv</code>; any edit to the data changes it.</li>
     </ul>
   </section>
 
@@ -657,6 +663,7 @@ def generate_report(
 
   <footer class="footer">
     <div class="footer-links">
+      <a href="index.html">&larr; Case Index</a>
       <a href="https://cwe.mitre.org/data/definitions/203.html" target="_blank" rel="noopener noreferrer">CWE-203 ↗</a>
       <a href="https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">OWASP Auth Cheat Sheet ↗</a>
     </div>
